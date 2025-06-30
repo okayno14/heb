@@ -96,14 +96,9 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
     TagBody =
         lists:foldl(
             fun
-                (Child, Acc) when is_binary(Child) andalso is_binary(Acc) ->
-                    <<Acc/binary, " ", Child/binary>>;
-                (ChildFun, Acc) when is_function(ChildFun, 1) andalso is_binary(Acc) ->
-                    Child = ChildFun(TagState),
-                    <<Acc/binary, " ", Child/binary>>;
-                (ChildFun, Acc) when is_function(ChildFun, 2) andalso is_binary(Acc) ->
-                    Child = ChildFun(TagState, Config),
-                    <<Acc/binary, " ", Child/binary>>
+                (Child, Acc) ->
+                    Child2 = tag_body2_inc_deep(Child, Config, TagState),
+                    <<Acc/binary, " ", Child2/binary>>
             end,
             <<"">>, ChildrenList
         ),
@@ -146,6 +141,18 @@ tag_1(HTMLDocument, Name, AttrList, ChildrenList, Config = #{type := human}) ->
     #{format_opts := #{space_tab := SpaceTab}} = Config,
     HTMLDocument.
 %%--------------------------------------------------------------------
+
+tag_body2_inc_deep(Child, Config, TagState) ->
+    DeepLvl = TagState#tag_state.deep_lvl + 1,
+    TagState2 = TagState#tag_state{deep_lvl = DeepLvl},
+    tag_body2(Child, Config, TagState2).
+
+tag_body2(Child, Config, TagState) when is_binary(Child) ->
+    Child;
+tag_body2(ChildFun, Config, TagState) when is_function(ChildFun, 1) ->
+    Child = ChildFun(TagState);
+tag_body2(ChildFun, Config, TagState) when is_function(ChildFun, 2) ->
+    Child = ChildFun(TagState, Config).
 
 %%--------------------------------------------------------------------
 %% @doc
