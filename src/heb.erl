@@ -1,6 +1,7 @@
 -module(heb).
 
 -export([
+    build/1,
     build/2,
 
     tag/3,
@@ -31,6 +32,15 @@
     }.
 
 -type attr_fun() :: fun(() -> AttrString :: binary()).
+
+%%--------------------------------------------------------------------
+%% @doc
+-spec build(TagFun :: tag_fun()) ->
+    HTMLDocument2 :: binary().
+%%--------------------------------------------------------------------
+build(TagFun) ->
+    build(<<"">>, TagFun).
+%%--------------------------------------------------------------------
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -119,7 +129,7 @@ tag_1(HTMLDocument, Name, AttrList, ChildrenList, Config = #{type := oneline}) -
         <<"">> ->
             Tag;
         _ ->
-        <<HTMLDocument/binary, " ", Tag/binary>>
+            <<HTMLDocument/binary, " ", Tag/binary>>
     end.
 %%--------------------------------------------------------------------
 
