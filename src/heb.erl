@@ -95,16 +95,16 @@ tag(Name, AttrList, ChildrenList, Config) ->
 tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := oneline}) ->
     TagBody =
         lists:foldl(
-            fun
-                (Child, Acc) ->
-                    Child2 = tag_body2_inc_deep(Child, Config, TagState),
-                    <<Acc/binary, " ", Child2/binary>>
+            fun(Child, Acc) ->
+                Child2 = tag_body2_inc_deep(Child, Config, TagState),
+                <<Acc/binary, " ", Child2/binary>>
             end,
-            <<"">>, ChildrenList
+            <<"">>,
+            ChildrenList
         ),
 
     TagAttrs = tag_attrs(AttrList),
-    TagBegining = tag_begining(Name,TagAttrs),
+    TagBegining = tag_begining(Name, TagAttrs),
     TagEnding = tag_ending(Name),
 
     Tag =
@@ -115,16 +115,92 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
                 <<TagBegining/binary, TagBody/binary, " ", TagEnding/binary>>
         end,
 
-    HTMLDocument = TagState#tag_state.doc,
-    case HTMLDocument of
-        <<"">> ->
-            Tag;
-        _ ->
-            <<HTMLDocument/binary, " ", Tag/binary>>
-    end;
-tag_1(HTMLDocument, Name, AttrList, ChildrenList, Config = #{type := human}) ->
+%      HTMLDocument = TagState#tag_state.doc,
+    Tag;
+%      case HTMLDocument of
+%          <<"">> ->
+%              Tag;
+%          _ ->
+%              <<HTMLDocument/binary, " ", Tag/binary>>
+%      end;
+tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := human}) ->
     #{format_opts := #{space_tab := SpaceTab}} = Config,
-    HTMLDocument.
+
+    #tag_state{deep_lvl = DeepLvl} = TagState,
+
+    Tab =
+        lists:foldl(
+            fun(_, Acc) ->
+                lists:foldl(
+                    fun(_, Acc2) ->
+                        <<Acc2/binary, " ">>
+                    end,
+                    Acc,
+                    lists:seq(1, SpaceTab)
+                )
+            end,
+            <<"">>,
+            lists:seq(1, DeepLvl)
+        ),
+
+%      io:format(user, "~n~tsq~n", [Tab]),
+
+    TabBody =
+        %% TODO вынести в функцию (+1 глубина)
+        lists:foldl(
+            fun(_, Acc2) ->
+                <<Acc2/binary, " ">>
+            end,
+            Tab,
+            lists:seq(1, SpaceTab)
+        ),
+
+%      io:format(user, "~n~tsq_b~n", [TabBody]),
+
+    %% TODO можно вынести в функцию
+    TagBody =
+        lists:foldl(
+            fun(Child, Acc) ->
+                Child2 = tag_body2_inc_deep(Child, Config, TagState),
+                Child3 = <<Acc/binary, Child2/binary>>,
+                Child4 =
+                    case is_binary(Child) of
+                        true ->
+                            <<TabBody/binary, Child3/binary, "\n">>;
+                        false ->
+                            <<Child3/binary, "\n">>
+                    end
+            end,
+            <<"">>,
+            ChildrenList
+        ),
+
+    TagAttrs = tag_attrs(AttrList),
+
+    TagBegining = tag_begining(Name, TagAttrs),
+    TagBegining2 = <<Tab/binary, TagBegining/binary>>,
+
+    TagEnding = tag_ending(Name),
+    TagEnding2 = <<Tab/binary, TagEnding/binary>>,
+
+    DeepLvlBin = erlang:integer_to_binary(DeepLvl),
+
+    Tag =
+        case TagBody of
+            <<"">> ->
+                io:format(user, "human tagbody empty~n", []),
+                <<TagBegining2/binary, DeepLvlBin/binary, " ", TagEnding/binary, DeepLvlBin/binary>>;
+            _ ->
+%                  io:format(user, "human tagbody not empty~n TagBody:~n~ts~n", [TagBody]),
+                <<
+                    Tab/binary, TagBegining/binary, DeepLvlBin/binary, "\n",
+                    TagBody/binary,
+                    Tab/binary, TagEnding/binary, DeepLvlBin/binary
+                >>
+        end,
+
+%      HTMLDocument = TagState#tag_state.doc,
+    Tag.
 %%--------------------------------------------------------------------
 
 
