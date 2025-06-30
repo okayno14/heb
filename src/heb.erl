@@ -3,7 +3,7 @@
 -export([
     %      attr/2,
 
-    %      tag/3,
+    tag/3,
     tag/4
 
     %      build/2
@@ -32,6 +32,22 @@
 
 -type attr_fun() :: fun(() -> AttrString :: binary()).
 
+
+%%--------------------------------------------------------------------
+%% @doc
+-spec tag(
+    Name :: binary(),
+    AttrList :: [Attr :: attr_fun()],
+    ChildrenList :: [Child :: binary() | tag_fun() | tag_fun_inherit_config()]
+) ->
+    tag_fun_inherit_config().
+%%--------------------------------------------------------------------
+tag(Name, AttrList, ChildrenList) ->
+    fun(HTMLDocument, Config) ->
+        tag_1(HTMLDocument, Name, AttrList, ChildrenList, Config)
+    end.
+%%--------------------------------------------------------------------
+
 %%--------------------------------------------------------------------
 %% @doc
 -spec tag(
@@ -55,10 +71,10 @@ tag_1(HTMLDocument, Name, AttrList, ChildrenList, Config = #{type := oneline}) -
                 (Child, Acc) when is_binary(Child) andalso is_binary(Acc) ->
                     <<Acc/binary, " ", Child/binary>>;
                 (ChildFun, Acc) when is_function(ChildFun, 1) andalso is_binary(Acc) ->
-                    Child = ChildFun(Acc),
+                    Child = ChildFun(<<"">>),
                     <<Acc/binary, " ", Child/binary>>;
                 (ChildFun, Acc) when is_function(ChildFun, 2) andalso is_binary(Acc) ->
-                    Child = ChildFun(Acc, Config),
+                    Child = ChildFun(<<"">>, Config),
                     <<Acc/binary, " ", Child/binary>>
             end,
             <<"">>, ChildrenList
@@ -72,7 +88,7 @@ tag_1(HTMLDocument, Name, AttrList, ChildrenList, Config = #{type := oneline}) -
             <<"">> ->
                 <<TagBegining/binary, " ", TagEnding/binary>>;
             _ ->
-                <<TagBegining/binary, " ", TagBody/binary, " ", TagEnding/binary>>
+                <<TagBegining/binary, TagBody/binary, " ", TagEnding/binary>>
         end,
 
     case HTMLDocument of
