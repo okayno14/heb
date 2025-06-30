@@ -13,7 +13,7 @@ some_test_() ->
 
 simple_tag() ->
     HTMLDocumentFun = heb:tag(<<"div">>, [], [], #{type => oneline}),
-    ?assertEqual(<<"<div> </div>">>, HTMLDocumentFun(<<"">>)).
+    ?assertEqual(<<"<div> </div>">>, heb:build(HTMLDocumentFun)).
 
 simple_numeric_list() ->
     HTMLDocumentFun =
@@ -23,7 +23,7 @@ simple_numeric_list() ->
             heb:tag(<<"li">>, [], [<<"c">>])
         ], #{type => oneline}),
 
-    ?assertEqual(<<"<ul> <li> a </li> <li> b </li> <li> c </li> </ul>">>, HTMLDocumentFun(<<"">>)).
+    ?assertEqual(<<"<ul> <li> a </li> <li> b </li> <li> c </li> </ul>">>, heb:build(HTMLDocumentFun)).
 
 simple_ref() ->
     HTMLDocumentFun =
@@ -31,7 +31,7 @@ simple_ref() ->
             type => oneline
         }),
 
-    ?assertEqual(<<"<a href=\"images/xxx.jpg\"> My Photo !!! </a>">>, HTMLDocumentFun(<<"">>)).
+    ?assertEqual(<<"<a href=\"images/xxx.jpg\"> My Photo !!! </a>">>, heb:build(HTMLDocumentFun)).
 
 -endif.
 
