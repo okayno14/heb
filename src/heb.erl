@@ -1,12 +1,12 @@
 -module(heb).
 
 -export([
+    build/2,
+
     %      attr/2,
 
     tag/3,
     tag/4
-
-    %      build/2
 ]).
 
 -export_type([
@@ -32,6 +32,15 @@
 
 -type attr_fun() :: fun(() -> AttrString :: binary()).
 
+
+%%--------------------------------------------------------------------
+%% @doc
+-spec build(HTMLDocument :: binary(), TagFun :: tag_fun()) ->
+    HTMLDocument2 :: binary().
+%%--------------------------------------------------------------------
+build(HTMLDocument, TagFun) ->
+    TagFun(HTMLDocument).
+%%--------------------------------------------------------------------
 
 %%--------------------------------------------------------------------
 %% @doc
