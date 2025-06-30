@@ -7,7 +7,8 @@
 some_test_() ->
     [
         {"simple tag", fun simple_tag/0},
-        {"simple numeric list", fun simple_numeric_list/0}
+        {"simple numeric list", fun simple_numeric_list/0},
+        {"simple ref", fun simple_ref/0}
     ].
 
 simple_tag() ->
@@ -23,6 +24,14 @@ simple_numeric_list() ->
         ], #{type => oneline}),
 
     ?assertEqual(<<"<ul> <li> a </li> <li> b </li> <li> c </li> </ul>">>, HTMLDocumentFun(<<"">>)).
+
+simple_ref() ->
+    HTMLDocumentFun =
+        heb:tag(<<"a">>, [heb:attr(<<"href">>, <<"images/xxx.jpg">>)], [<<"My Photo !!!">>], #{
+            type => oneline
+        }),
+
+    ?assertEqual(<<"<a href=\"images/xxx.jpg\"> My Photo !!! </a>">>, HTMLDocumentFun(<<"">>)).
 
 -endif.
 

@@ -3,10 +3,10 @@
 -export([
     build/2,
 
-    %      attr/2,
-
     tag/3,
-    tag/4
+    tag/4,
+
+    attr/2
 ]).
 
 -export_type([
@@ -31,7 +31,6 @@
     }.
 
 -type attr_fun() :: fun(() -> AttrString :: binary()).
-
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -89,7 +88,23 @@ tag_1(HTMLDocument, Name, AttrList, ChildrenList, Config = #{type := oneline}) -
             <<"">>, ChildrenList
         ),
 
-    TagBegining = <<"<", Name/binary, ">">>,
+    TagAttrs =
+        lists:foldl(
+            fun(Attr, Acc) when is_function(Attr, 0) andalso is_binary(Acc) ->
+                TagAttr = Attr(),
+                <<Acc/binary, " ", TagAttr/binary>>
+            end,
+            <<"">>, AttrList
+        ),
+
+    TagBegining =
+        case TagAttrs of
+            <<"">> ->
+                <<"<", Name/binary, ">">>;
+            _ ->
+                <<"<", Name/binary, TagAttrs/binary, ">">>
+        end,
+
     TagEnding = <<"</", Name/binary, ">">>,
 
     Tag =
@@ -105,6 +120,17 @@ tag_1(HTMLDocument, Name, AttrList, ChildrenList, Config = #{type := oneline}) -
             Tag;
         _ ->
         <<HTMLDocument/binary, " ", Tag/binary>>
+    end.
+%%--------------------------------------------------------------------
+
+%%--------------------------------------------------------------------
+%% @doc
+-spec attr(Key :: binary(), Value :: binary()) ->
+    attr_fun().
+%%--------------------------------------------------------------------
+attr(Key, Value) ->
+    fun() ->
+        <<Key/binary, "=", "\"", Value/binary, "\"">>
     end.
 %%--------------------------------------------------------------------
 
