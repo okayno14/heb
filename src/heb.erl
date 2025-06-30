@@ -103,24 +103,9 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
             <<"">>, ChildrenList
         ),
 
-    TagAttrs =
-        lists:foldl(
-            fun(Attr, Acc) when is_function(Attr, 0) andalso is_binary(Acc) ->
-                TagAttr = Attr(),
-                <<Acc/binary, " ", TagAttr/binary>>
-            end,
-            <<"">>, AttrList
-        ),
-
-    TagBegining =
-        case TagAttrs of
-            <<"">> ->
-                <<"<", Name/binary, ">">>;
-            _ ->
-                <<"<", Name/binary, TagAttrs/binary, ">">>
-        end,
-
-    TagEnding = <<"</", Name/binary, ">">>,
+    TagAttrs = tag_attrs(AttrList),
+    TagBegining = tag_begining(Name,TagAttrs),
+    TagEnding = tag_ending(Name),
 
     Tag =
         case TagBody of
@@ -142,6 +127,19 @@ tag_1(HTMLDocument, Name, AttrList, ChildrenList, Config = #{type := human}) ->
     HTMLDocument.
 %%--------------------------------------------------------------------
 
+
+tag_begining(Name, TagAttrs) ->
+    case TagAttrs of
+        <<"">> ->
+            <<"<", Name/binary, ">">>;
+        _ ->
+            <<"<", Name/binary, TagAttrs/binary, ">">>
+    end.
+
+tag_ending(Name) ->
+    TagEnding = <<"</", Name/binary, ">">>,
+    TagEnding.
+
 tag_body2_inc_deep(Child, Config, TagState) ->
     DeepLvl = TagState#tag_state.deep_lvl + 1,
     TagState2 = TagState#tag_state{deep_lvl = DeepLvl},
@@ -153,6 +151,16 @@ tag_body2(ChildFun, Config, TagState) when is_function(ChildFun, 1) ->
     Child = ChildFun(TagState);
 tag_body2(ChildFun, Config, TagState) when is_function(ChildFun, 2) ->
     Child = ChildFun(TagState, Config).
+
+tag_attrs(AttrList) ->
+    lists:foldl(
+        fun(Attr, Acc) when is_function(Attr, 0) andalso is_binary(Acc) ->
+            TagAttr = Attr(),
+            <<Acc/binary, " ", TagAttr/binary>>
+        end,
+        <<"">>,
+        AttrList
+    ).
 
 %%--------------------------------------------------------------------
 %% @doc
