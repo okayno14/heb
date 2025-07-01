@@ -130,19 +130,18 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
     Tab = shift_deep_lvl(DeepLvl,SpaceTab),
     TabBody = shift_1_tab(SpaceTab,Tab),
 
-    %% TODO можно вынести в функцию
     TagBody =
         lists:foldl(
             fun(Child, Acc) ->
                 Child2 = tag_body2_inc_deep(Child, Config, TagState),
-                Child3 = <<Acc/binary, Child2/binary>>,
-                Child4 =
-                    case is_binary(Child) of
-                        true ->
-                            <<TabBody/binary, Child3/binary, "\n">>;
-                        false ->
-                            <<Child3/binary, "\n">>
-                    end
+                case is_binary(Child) of
+                    true ->
+                        %% Подали в теле простой текст, то надо добавить отступ
+                        <<Acc/binary, TabBody/binary, Child2/binary, "\n">>;
+                    false ->
+                        %% Подали в теле другой тег, то отступы уже добавлены на выходе из рекурсии
+                        <<Acc/binary, Child2/binary, "\n">>
+                end
             end,
             <<"">>,
             ChildrenList
