@@ -123,6 +123,8 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
 %          _ ->
 %              <<HTMLDocument/binary, " ", Tag/binary>>
 %      end;
+%% TODO нужен тест на тег с пустым телом
+%% TODO нужен тест на смешивание конфигов
 tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := human}) ->
     #{format_opts := #{space_tab := SpaceTab}} = Config,
     #tag_state{deep_lvl = DeepLvl} = TagState,
@@ -148,20 +150,14 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
         ),
 
     TagAttrs = tag_attrs(AttrList),
-
     TagBegining = tag_begining(Name, TagAttrs),
-    TagBegining2 = <<Tab/binary, TagBegining/binary>>,
-
     TagEnding = tag_ending(Name),
-    TagEnding2 = <<Tab/binary, TagEnding/binary>>,
 
     Tag =
         case TagBody of
             <<"">> ->
-                io:format(user, "human tagbody empty~n", []),
-                <<TagBegining2/binary, " ", TagEnding/binary>>;
+                <<Tab/binary, TagBegining/binary, " ", TagEnding/binary>>;
             _ ->
-%                  io:format(user, "human tagbody not empty~n TagBody:~n~ts~n", [TagBody]),
                 <<
                     Tab/binary, TagBegining/binary, "\n",
                     TagBody/binary,
