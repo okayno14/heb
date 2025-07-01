@@ -125,37 +125,10 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
 %      end;
 tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := human}) ->
     #{format_opts := #{space_tab := SpaceTab}} = Config,
-
     #tag_state{deep_lvl = DeepLvl} = TagState,
 
-    Tab =
-        lists:foldl(
-            fun(_, Acc) ->
-                lists:foldl(
-                    fun(_, Acc2) ->
-                        <<Acc2/binary, " ">>
-                    end,
-                    Acc,
-                    lists:seq(1, SpaceTab)
-                )
-            end,
-            <<"">>,
-            lists:seq(1, DeepLvl)
-        ),
-
-%      io:format(user, "~n~tsq~n", [Tab]),
-
-    TabBody =
-        %% TODO вынести в функцию (+1 глубина)
-        lists:foldl(
-            fun(_, Acc2) ->
-                <<Acc2/binary, " ">>
-            end,
-            Tab,
-            lists:seq(1, SpaceTab)
-        ),
-
-%      io:format(user, "~n~tsq_b~n", [TabBody]),
+    Tab = shift_deep_lvl(DeepLvl,SpaceTab),
+    TabBody = shift_1_tab(SpaceTab,Tab),
 
     %% TODO можно вынести в функцию
     TagBody =
@@ -203,6 +176,11 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
     Tag.
 %%--------------------------------------------------------------------
 
+shift_deep_lvl(DeepLvl,SpaceTab) ->
+    lists:foldl(fun(_, Acc) -> shift_1_tab(SpaceTab, Acc) end, <<"">>, lists:seq(1, DeepLvl)).
+
+shift_1_tab(SpaceTab, Tab) ->
+    lists:foldl(fun(_, Acc2) -> <<Acc2/binary, " ">> end, Tab, lists:seq(1, SpaceTab)).
 
 tag_begining(Name, TagAttrs) ->
     case TagAttrs of
