@@ -156,23 +156,20 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
     TagEnding = tag_ending(Name),
     TagEnding2 = <<Tab/binary, TagEnding/binary>>,
 
-    DeepLvlBin = erlang:integer_to_binary(DeepLvl),
-
     Tag =
         case TagBody of
             <<"">> ->
                 io:format(user, "human tagbody empty~n", []),
-                <<TagBegining2/binary, DeepLvlBin/binary, " ", TagEnding/binary, DeepLvlBin/binary>>;
+                <<TagBegining2/binary, " ", TagEnding/binary>>;
             _ ->
 %                  io:format(user, "human tagbody not empty~n TagBody:~n~ts~n", [TagBody]),
                 <<
-                    Tab/binary, TagBegining/binary, DeepLvlBin/binary, "\n",
+                    Tab/binary, TagBegining/binary, "\n",
                     TagBody/binary,
-                    Tab/binary, TagEnding/binary, DeepLvlBin/binary
+                    Tab/binary, TagEnding/binary
                 >>
         end,
 
-%      HTMLDocument = TagState#tag_state.doc,
     Tag.
 %%--------------------------------------------------------------------
 
