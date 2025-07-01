@@ -138,9 +138,13 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
                 Child2 = tag_body2_inc_deep(Child, Config, TagState),
                 case is_binary(Child) of
                     true ->
-                        %% Подали в теле простой текст, то надо добавить отступ
+                        %% TODO translate
+                        %% Подали в теле простой текст, то надо добавить отступ,
+                        %% потому что иначе мы просто не попадём в место функции,
+                        %% где добавляются отступы для тегов
                         <<Acc/binary, TabBody/binary, Child2/binary, "\n">>;
                     false ->
+                        %% TODO translate
                         %% Подали в теле другой тег, то отступы уже добавлены на выходе из рекурсии
                         <<Acc/binary, Child2/binary, "\n">>
                 end
