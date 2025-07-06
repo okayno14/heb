@@ -15,6 +15,8 @@
     deep_lvl = 0 :: non_neg_integer()
 }).
 
+-define(is_child(Child), (is_binary(Child) orelse is_function(Child))).
+
 -export_type([
     tag_fun/0,
     tag_fun_inherit_config/0,
@@ -114,13 +116,14 @@ tag(Name, AttrList, ChildrenList, Config) ->
 tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := oneline}) ->
     TagBody =
         lists:foldl(
-            fun(Child, Acc) ->
+            fun(Child, Acc) when is_binary(Acc) and ?is_child(Child) ->
                 Child2 = tag_child(Child, Config, TagState),
                 <<Acc/binary, " ", Child2/binary>>
             end,
             <<"">>,
             ChildrenList
         ),
+    true = is_binary(TagBody),
 
     TagAttrs = tag_attrs(AttrList),
     TagBegining = tag_begining(Name, TagAttrs),
@@ -136,7 +139,7 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
 
     TagBody =
         lists:foldl(
-            fun(Child, Acc) ->
+            fun(Child, Acc) when is_binary(Acc) and ?is_child(Child) ->
                 Child2 = tag_child_inc_deep_lvl(Child, Config, TagState),
                 case is_binary(Child) of
                     true ->
@@ -156,6 +159,7 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
             <<"">>,
             ChildrenList
         ),
+    true = is_binary(TagBody),
 
     TagAttrs = tag_attrs(AttrList),
     TagBegining = tag_begining(Name, TagAttrs),
@@ -226,14 +230,18 @@ tag_ending(Name) ->
     TagAttrs :: binary().
 %%--------------------------------------------------------------------
 tag_attrs(AttrList) ->
-    lists:foldl(
-        fun(Attr, Acc) when is_function(Attr, 0) andalso is_binary(Acc) ->
-            TagAttr = Attr(),
-            <<Acc/binary, " ", TagAttr/binary>>
-        end,
-        <<"">>,
-        AttrList
-    ).
+    TagAttrs =
+        lists:foldl(
+            fun(Attr, Acc) when is_function(Attr, 0) andalso is_binary(Acc) ->
+                TagAttr = Attr(),
+                true = is_binary(TagAttr),
+                <<Acc/binary, " ", TagAttr/binary>>
+            end,
+            <<"">>,
+            AttrList
+        ),
+    true = is_binary(TagAttrs),
+    TagAttrs.
 %%--------------------------------------------------------------------
 
 %%--------------------------------------------------------------------
@@ -256,9 +264,15 @@ attr(Key, Value) ->
 -spec tab(DeepLvl :: non_neg_integer(), SpaceTab :: pos_integer()) ->
     Tab :: binary().
 %%--------------------------------------------------------------------
-tab(DeepLvl,SpaceTab) ->
-    lists:foldl(fun(_, Acc) -> shift_1_tab(SpaceTab, Acc) end, <<"">>, lists:seq(1, DeepLvl)).
+tab(DeepLvl, SpaceTab) ->
+    Tab =
+        lists:foldl(fun(_, Acc) -> shift_1_tab(SpaceTab, Acc) end, <<"">>, lists:seq(1, DeepLvl)),
+    true = is_binary(Tab),
+    Tab.
+
 shift_1_tab(SpaceTab, Tab) ->
-    lists:foldl(fun(_, Acc2) -> <<Acc2/binary, " ">> end, Tab, lists:seq(1, SpaceTab)).
+    lists:foldl(
+        fun(_, Acc2) when is_binary(Acc2) -> <<Acc2/binary, " ">> end, Tab, lists:seq(1, SpaceTab)
+    ).
 %%--------------------------------------------------------------------
 
