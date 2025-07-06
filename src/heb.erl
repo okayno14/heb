@@ -38,7 +38,6 @@
     | #{
         type := human,
         format_opts := #{
-            %% TODO rename (посмотреть, как этот параметр называется в виме)
             space_tab := pos_integer()
         }
     }.
