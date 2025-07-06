@@ -91,6 +91,16 @@ tag(Name, AttrList, ChildrenList, Config) ->
 %%--------------------------------------------------------------------
 
 %%--------------------------------------------------------------------
+%% @doc
+-spec tag_1(
+    TagState :: #tag_state{},
+    Name :: binary(),
+    AttrList :: [Attr :: attr_fun()],
+    ChildrenList :: nonempty_list(Child :: binary() | tag_fun() | tag_fun_inherit_config()),
+    Config :: config()
+) ->
+    HTMLDocument2 :: binary().
+%%--------------------------------------------------------------------
 tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := oneline}) ->
     TagBody =
         lists:foldl(
@@ -125,20 +135,15 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
                 Child2 = tag_body2_inc_deep(Child, Config, TagState),
                 case is_binary(Child) of
                     true ->
-                        %% TODO translate
-                        %% Подали в теле простой текст, надо добавить отступ,
-                        %% потому что иначе мы просто не попадём в место функции,
-                        %% где добавляются отступы для тегов
+                        %% Add Tabs to simle-text-body
                         <<Acc/binary, TabBody/binary, Child2/binary, "\n">>;
                     false ->
                         case string:find(Child2, <<"\n">>) of
                             nomatch ->
-                                %% TODO translate
-                                %% Спарсили однострочный html-тэг, надо добавить отступ
+                                %% Add Tabs to oneline html-tag
                                 <<Acc/binary, TabBody/binary, Child2/binary, "\n">>;
                             _ ->
-                                %% TODO translate
-                                %% Подали в теле другой тег, отступы уже добавлены на выходе из рекурсии
+                                %% Got human-html-tag, do nothuig
                                 <<Acc/binary, Child2/binary, "\n">>
                         end
                 end
