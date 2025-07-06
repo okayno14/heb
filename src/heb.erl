@@ -29,6 +29,8 @@
     (#tag_state{}, Config :: config()) -> HTMLDocument2 :: binary()
 ).
 
+-type tag_child() :: binary() | tag_fun() | tag_fun_inherit_config().
+
 -type config() ::
     #{type := oneline}
     | #{
@@ -40,6 +42,10 @@
     }.
 
 -type attr_fun() :: fun(() -> AttrString :: binary()).
+
+%%%===================================================================
+%%% API
+%%%===================================================================
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -64,7 +70,7 @@ build(HTMLDocument, TagFun) ->
 -spec tag(
     Name :: binary(),
     AttrList :: [Attr :: attr_fun()],
-    ChildrenList :: nonempty_list(Child :: binary() | tag_fun() | tag_fun_inherit_config())
+    ChildrenList :: nonempty_list(tag_child())
 ) ->
     tag_fun_inherit_config().
 %%--------------------------------------------------------------------
@@ -79,7 +85,7 @@ tag(Name, AttrList, ChildrenList) ->
 -spec tag(
     Name :: binary(),
     AttrList :: [Attr :: attr_fun()],
-    ChildrenList :: nonempty_list(Child :: binary() | tag_fun() | tag_fun_inherit_config()),
+    ChildrenList :: nonempty_list(tag_child()),
     Config :: config()
 ) ->
     tag_fun().
@@ -90,13 +96,17 @@ tag(Name, AttrList, ChildrenList, Config) ->
     end.
 %%--------------------------------------------------------------------
 
+%%%===================================================================
+%%% Tag.builder.recursion
+%%%===================================================================
+
 %%--------------------------------------------------------------------
 %% @doc
 -spec tag_1(
     TagState :: #tag_state{},
     Name :: binary(),
     AttrList :: [Attr :: attr_fun()],
-    ChildrenList :: nonempty_list(Child :: binary() | tag_fun() | tag_fun_inherit_config()),
+    ChildrenList :: nonempty_list(tag_child()),
     Config :: config()
 ) ->
     HTMLDocument2 :: binary().
@@ -105,7 +115,7 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
     TagBody =
         lists:foldl(
             fun(Child, Acc) ->
-                Child2 = tag_body2(Child, Config, TagState),
+                Child2 = tag_child(Child, Config, TagState),
                 <<Acc/binary, " ", Child2/binary>>
             end,
             <<"">>,
@@ -116,23 +126,18 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
     TagBegining = tag_begining(Name, TagAttrs),
     TagEnding = tag_ending(Name),
 
-    case TagBody of
-        <<"">> ->
-            <<TagBegining/binary, " ", TagEnding/binary>>;
-        _ ->
-            <<TagBegining/binary, TagBody/binary, " ", TagEnding/binary>>
-    end;
+    <<TagBegining/binary, TagBody/binary, " ", TagEnding/binary>>;
 tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := human}) ->
     #{format_opts := #{space_tab := SpaceTab}} = Config,
     #tag_state{deep_lvl = DeepLvl} = TagState,
 
-    Tab = shift_deep_lvl(DeepLvl,SpaceTab),
+    Tab = tab(DeepLvl,SpaceTab),
     TabBody = shift_1_tab(SpaceTab,Tab),
 
     TagBody =
         lists:foldl(
             fun(Child, Acc) ->
-                Child2 = tag_body2_inc_deep(Child, Config, TagState),
+                Child2 = tag_child_inc_deep_lvl(Child, Config, TagState),
                 case is_binary(Child) of
                     true ->
                         %% Add Tabs to simle-text-body
@@ -156,24 +161,46 @@ tag_1(TagState = #tag_state{}, Name, AttrList, ChildrenList, Config = #{type := 
     TagBegining = tag_begining(Name, TagAttrs),
     TagEnding = tag_ending(Name),
 
-    case TagBody of
-        <<"">> ->
-            <<Tab/binary, TagBegining/binary, " ", TagEnding/binary>>;
-        _ ->
-            <<
-                Tab/binary, TagBegining/binary, "\n",
-                TagBody/binary,
-                Tab/binary, TagEnding/binary
-            >>
-    end.
+    <<
+        Tab/binary, TagBegining/binary, "\n",
+        TagBody/binary,
+        Tab/binary, TagEnding/binary
+    >>.
 %%--------------------------------------------------------------------
 
-shift_deep_lvl(DeepLvl,SpaceTab) ->
-    lists:foldl(fun(_, Acc) -> shift_1_tab(SpaceTab, Acc) end, <<"">>, lists:seq(1, DeepLvl)).
+%%--------------------------------------------------------------------
+%% @doc
+-spec tag_child_inc_deep_lvl(tag_child(), config(), #tag_state{}) ->
+    HTMLDocument2 :: binary().
+%%--------------------------------------------------------------------
+tag_child_inc_deep_lvl(Child, Config, TagState) ->
+    DeepLvl = TagState#tag_state.deep_lvl + 1,
+    TagState2 = TagState#tag_state{deep_lvl = DeepLvl},
+    tag_child(Child, Config, TagState2).
+%%--------------------------------------------------------------------
 
-shift_1_tab(SpaceTab, Tab) ->
-    lists:foldl(fun(_, Acc2) -> <<Acc2/binary, " ">> end, Tab, lists:seq(1, SpaceTab)).
+%%--------------------------------------------------------------------
+%% @doc
+-spec tag_child(tag_child(), config(), #tag_state{}) ->
+    HTMLDocument2 :: binary().
+%%--------------------------------------------------------------------
+tag_child(Child, _Config, _TagState) when is_binary(Child) ->
+    Child;
+tag_child(ChildFun, _Config, TagState) when is_function(ChildFun, 1) ->
+    ChildFun(TagState);
+tag_child(ChildFun, Config, TagState) when is_function(ChildFun, 2) ->
+    ChildFun(TagState, Config).
+%%--------------------------------------------------------------------
 
+%%%===================================================================
+%%% Tag.builder
+%%%===================================================================
+
+%%--------------------------------------------------------------------
+%% @doc
+-spec tag_begining(Name :: binary(), TagAttrs :: binary()) ->
+    TagBegining :: binary().
+%%--------------------------------------------------------------------
 tag_begining(Name, TagAttrs) ->
     case TagAttrs of
         <<"">> ->
@@ -181,23 +208,23 @@ tag_begining(Name, TagAttrs) ->
         _ ->
             <<"<", Name/binary, TagAttrs/binary, ">">>
     end.
+%%--------------------------------------------------------------------
 
+%%--------------------------------------------------------------------
+%% @doc
+-spec tag_ending(Name :: binary()) ->
+    TagEnding :: binary().
+%%--------------------------------------------------------------------
 tag_ending(Name) ->
     TagEnding = <<"</", Name/binary, ">">>,
     TagEnding.
+%%--------------------------------------------------------------------
 
-tag_body2_inc_deep(Child, Config, TagState) ->
-    DeepLvl = TagState#tag_state.deep_lvl + 1,
-    TagState2 = TagState#tag_state{deep_lvl = DeepLvl},
-    tag_body2(Child, Config, TagState2).
-
-tag_body2(Child, Config, TagState) when is_binary(Child) ->
-    Child;
-tag_body2(ChildFun, Config, TagState) when is_function(ChildFun, 1) ->
-    Child = ChildFun(TagState);
-tag_body2(ChildFun, Config, TagState) when is_function(ChildFun, 2) ->
-    Child = ChildFun(TagState, Config).
-
+%%--------------------------------------------------------------------
+%% @doc
+-spec tag_attrs(AttrList :: [Attr :: attr_fun()]) ->
+    TagAttrs :: binary().
+%%--------------------------------------------------------------------
 tag_attrs(AttrList) ->
     lists:foldl(
         fun(Attr, Acc) when is_function(Attr, 0) andalso is_binary(Acc) ->
@@ -207,6 +234,7 @@ tag_attrs(AttrList) ->
         <<"">>,
         AttrList
     ).
+%%--------------------------------------------------------------------
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -217,5 +245,20 @@ attr(Key, Value) ->
     fun() ->
         <<Key/binary, "=", "\"", Value/binary, "\"">>
     end.
+%%--------------------------------------------------------------------
+
+%%%===================================================================
+%%% utils
+%%%===================================================================
+
+%%--------------------------------------------------------------------
+%% @doc
+-spec tab(DeepLvl :: non_neg_integer(), SpaceTab :: pos_integer()) ->
+    Tab :: binary().
+%%--------------------------------------------------------------------
+tab(DeepLvl,SpaceTab) ->
+    lists:foldl(fun(_, Acc) -> shift_1_tab(SpaceTab, Acc) end, <<"">>, lists:seq(1, DeepLvl)).
+shift_1_tab(SpaceTab, Tab) ->
+    lists:foldl(fun(_, Acc2) -> <<Acc2/binary, " ">> end, Tab, lists:seq(1, SpaceTab)).
 %%--------------------------------------------------------------------
 
